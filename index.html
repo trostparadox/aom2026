@@ -216,7 +216,8 @@ function render(){
   const vis=DATA.filter(d=>passes(d));const grid=$("#grid");grid.innerHTML="";renderTabs();renderPicks();renderOD();
   if(!vis.length){const none=allClusters().length===0&&allColleagues().length===0;
     $("#daysum").innerHTML=none?"<span>Build your view — tap ＋ topic or ＋ colleague above to add what you care about.</span>":"<span>No sessions match — loosen relevance or clusters.</span>";grid.style.height="80px";return;}
-  const winS=Math.floor(Math.min(...vis.map(d=>d.sMin))/60)*60-15,winE=Math.ceil(Math.max(...vis.map(d=>d.eMin))/60)*60+5;
+  const dayAll=DATA.filter(d=>d.day===state.day);   // fixed axis = the day's full pool span, so it stays put as filters change and OPEN fills the gaps
+  const winS=Math.floor(Math.min(...dayAll.map(d=>d.sMin))/60)*60-15,winE=Math.ceil(Math.max(...dayAll.map(d=>d.eMin))/60)*60+5;
   grid.style.height=((winE-winS)*PXMIN+PAD)+"px";
   for(let m=Math.ceil(winS/60)*60;m<=winE;m+=60){const h=document.createElement("div");h.className="hour";h.style.top=((m-winS)*PXMIN+PAD/2)+"px";h.innerHTML=`<span>${fmt(m).replace(/[ap]$/,x=>x==="a"?" AM":" PM")}</span>`;grid.appendChild(h);}
   const lane=document.createElement("div");lane.className="lane";const gut=document.createElement("div");gut.className="gutter";
