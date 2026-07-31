@@ -43,6 +43,7 @@ input[type=search],input[type=text],input[type=email]{padding:5px 9px;border:1px
 .chip .x{margin-left:6px;padding:0 4px;opacity:.5;font-weight:700;border-radius:8px}
 .chip .x:hover{opacity:1;color:#fff;background:var(--warn)}
 .setsel{font-size:11px;color:var(--ink2);padding-top:4px}.setsel a{color:var(--accent);cursor:pointer;font-weight:600}
+.tychk{font-size:12px;color:var(--ink);display:inline-flex;align-items:center;gap:4px;cursor:pointer;margin:2px 8px 2px 0}
 .tabs{display:flex;gap:3px;padding:12px 16px 0;flex-wrap:wrap}
 .tab{padding:7px 13px 8px;border:1px solid var(--line);border-bottom:none;border-radius:9px 9px 0 0;cursor:pointer;background:transparent;color:var(--ink2);font-size:13px;font-weight:600}
 .tab .d{display:block;font-size:10px;font-weight:500;color:var(--ink2);font-family:var(--mono)}
@@ -124,14 +125,15 @@ let TAG=null, CFG=null;
 })();
 
 // ---- per-person state ----
-let state, picks, custCol, custTop, hidden, rmTop, rmCol, DATA=[], CLUSTERS=[], PEOPLE=[];
+let state, picks, custCol, custTop, hidden, rmTop, rmCol, hideTypes, DATA=[], CLUSTERS=[], PEOPLE=[];
 function pkey(k){return "aomM_"+TAG+"_"+k;}
 function loadUser(){
-  state={score:CFG.guest?4:7,pickedonly:false,hidehidden:true,nowd:true,nopost:false,q:"",clusters:new Set(),people:new Set(),day:0};
+  state={score:CFG.guest?4:7,pickedonly:false,hidehidden:true,nowd:true,q:"",clusters:new Set(),people:new Set(),day:0};
   picks=new Set(JSON.parse(localStorage.getItem(pkey("picks"))||"[]"));
   hidden=new Set(JSON.parse(localStorage.getItem(pkey("hidden"))||"[]"));
   rmTop=new Set(JSON.parse(localStorage.getItem(pkey("rmtop"))||"[]"));   // dropped built-in topics
   rmCol=new Set(JSON.parse(localStorage.getItem(pkey("rmcol"))||"[]"));   // dropped built-in colleagues
+  hideTypes=new Set(JSON.parse(localStorage.getItem(pkey("hidetypes"))||"[]"));   // hidden session types
   custCol=JSON.parse(localStorage.getItem(pkey("col"))||"[]");   // [[disp,[sn],[pf]]]
   custTop=JSON.parse(localStorage.getItem(pkey("top"))||"[]");   // [[key,tier,label,[kw]]]
   compute();
@@ -167,18 +169,19 @@ function compute(){
 const NICHE=()=>new Set(CFG.niche);
 function passes(d,day){
   if(d.day!==(day??state.day))return false;
-  if(hidden.has(d.id))return !state.hidehidden;   // hidden events appear only when "hide hidden" is off
+  if(state.q){const b=(d.title+" "+d.papers.join(" ")+" "+d.colleagues.join(" ")+" "+d.divs.join(" ")).toLowerCase();
+    if(!b.includes(state.q.toLowerCase()))return false;}
   if(state.pickedonly)return picks.has(d.id);
+  if(picks.has(d.id))return true;                        // starred: always shown (bypasses type/relevance/not-likely/withdrawn)
+  if(hidden.has(d.id))return !state.hidehidden;          // not-likely: only when "hide unlikely" is off
+  if(hideTypes.has(d.type))return false;                 // session-type filter
   if(state.nowd&&d.withdrawn)return false;
-  if(state.nopost&&d.type==="Poster")return false;
   const iscol=d.colleagues.length>0;
   if(state.people.size){ if(!d.colleagues.some(c=>state.people.has(c)))return false; }
   else{
     const on=d.clusters.filter(k=>state.clusters.has(k));
     if(!iscol&&d.clusters.length&&on.length===0)return false;
     if(!(d.score>=state.score||iscol||on.some(k=>NICHE().has(k))||(CFG.guest&&on.length)))return false; }
-  if(state.q){const b=(d.title+" "+d.papers.join(" ")+" "+d.colleagues.join(" ")+" "+d.divs.join(" ")).toLowerCase();
-    if(!b.includes(state.q.toLowerCase()))return false;}
   return true;
 }
 function layout(items){items.sort((a,b)=>a.sMin-b.sMin||a.eMin-b.eMin);
@@ -199,13 +202,14 @@ function renderApp(){
      <input type="range" id="score" min="4" max="12" value="7"> <b id="scoreV">7</b></div>
      <label><input type="checkbox" id="pickedonly"> ★ my picks only</label>
      <label><input type="checkbox" id="nowd" checked> hide withdrawn</label>
-     <label><input type="checkbox" id="nopost"> hide posters</label>
      <label><input type="checkbox" id="hidehidden" checked> hide unlikely</label>
      <input type="search" id="q" placeholder="keyword…"></div>
    <div class="bar bar2"><span class="lab">Topics</span><span class="setsel"><a id="tAll">all</a> · <a id="tNone">none</a><a id="tReset" style="display:none"> · restore removed</a></span>
      <span class="chips" id="chips"></span><span class="chip add" id="addTop">＋ topic</span></div>
    <div class="bar bar2"><span class="lab">Colleagues</span><span class="setsel"><a id="pAll">all</a> · <a id="pNone">none</a><a id="pReset" style="display:none"> · restore removed</a></span>
      <span class="chips" id="pchips"></span><span class="chip add" id="addCol">＋ colleague</span></div>
+   <div class="bar bar2"><span class="lab">Session types</span><span class="setsel"><a id="tyAll">all</a> · <a id="tyNone">none</a></span>
+     <span class="chips" id="tychips"></span></div>
    <div class="tabs" id="tabs"></div>
    <div class="wrap"><div class="daysum" id="daysum"></div><div class="grid" id="grid"></div><div class="od" id="odwrap"></div></div>
    <aside class="side" id="side"></aside>`;
@@ -220,6 +224,10 @@ function renderChips(){
   $("#pchips").querySelectorAll(".chip").forEach(ch=>ch.onclick=e=>{const n=ch.dataset.n;
     if(e.target.classList.contains("x"))return removeColleague(n);
     state.people.has(n)?state.people.delete(n):state.people.add(n);ch.classList.toggle("on");render();});
+  const tc={};DATA.forEach(d=>tc[d.type]=(tc[d.type]||0)+1);
+  const tys=Object.keys(tc).sort((a,b)=>tc[b]-tc[a]);
+  $("#tychips").innerHTML=tys.map(t=>`<label class="tychk"><input type="checkbox" data-ty="${esc(t)}" ${hideTypes.has(t)?'':'checked'}> ${esc(t)} <span style="color:var(--ink2)">${tc[t]}</span></label>`).join("");
+  $("#tychips").querySelectorAll("input").forEach(cb=>cb.onchange=()=>{const t=cb.dataset.ty;cb.checked?hideTypes.delete(t):hideTypes.add(t);localStorage.setItem(pkey("hidetypes"),JSON.stringify([...hideTypes]));render();});
   if($("#tReset"))$("#tReset").style.display=rmTop.size?"inline":"none";
   if($("#pReset"))$("#pReset").style.display=rmCol.size?"inline":"none";
 }
@@ -321,7 +329,8 @@ function wire(){
   $("#pickedonly").onchange=e=>{state.pickedonly=e.target.checked;render();};
   $("#hidehidden").onchange=e=>{state.hidehidden=e.target.checked;render();};
   $("#nowd").onchange=e=>{state.nowd=e.target.checked;render();};
-  $("#nopost").onchange=e=>{state.nopost=e.target.checked;render();};
+  $("#tyAll").onclick=()=>{hideTypes.clear();localStorage.setItem(pkey("hidetypes"),"[]");renderChips();render();};
+  $("#tyNone").onclick=()=>{hideTypes=new Set(DATA.map(d=>d.type));localStorage.setItem(pkey("hidetypes"),JSON.stringify([...hideTypes]));renderChips();render();};
   $("#q").oninput=e=>{state.q=e.target.value;render();};
   $("#tAll").onclick=()=>{state.clusters=new Set(CLUSTERS.map(c=>c.k));renderChips();render();};
   $("#tNone").onclick=()=>{state.clusters.clear();renderChips();render();};
