@@ -332,7 +332,7 @@ function enterGuest(){localStorage.setItem("aom_me","guest");TAG="guest";CFG=gue
 function choose(t){localStorage.setItem("aom_me",t);TAG=t;CFG=CFGS[t];loadUser();renderApp();}
 function reqForm(email){
   const e=email||"";$("#modalCard").innerHTML=`<h2>Request your planner</h2>
-   <p class="meta">This emails Steve your details. He adds you to the planner and replies with the link — you'll type your name or email to load it.</p>
+   <p class="meta">This emails Steve Trost your details. He adds you to the planner and replies with the link — you'll type your name or email to load it.</p>
    <label class="fld">Name<input type="text" id="rqName"></label>
    <label class="fld">Email<input type="email" id="rqEmail" value="${esc(e)}"></label>
    <label class="fld">Institution<input type="text" id="rqInst"></label>
