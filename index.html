@@ -40,6 +40,8 @@ input[type=search],input[type=text],input[type=email]{padding:5px 9px;border:1px
 .b.c.me{background:var(--pick);color:#fff}
 .ev.mine .rail{background:var(--pick)!important}
 .chip.add{border-style:dashed;color:var(--accent)}
+.chip .x{margin-left:6px;padding:0 4px;opacity:.5;font-weight:700;border-radius:8px}
+.chip .x:hover{opacity:1;color:#fff;background:var(--warn)}
 .setsel{font-size:11px;color:var(--ink2);padding-top:4px}.setsel a{color:var(--accent);cursor:pointer;font-weight:600}
 .tabs{display:flex;gap:3px;padding:12px 16px 0;flex-wrap:wrap}
 .tab{padding:7px 13px 8px;border:1px solid var(--line);border-bottom:none;border-radius:9px 9px 0 0;cursor:pointer;background:transparent;color:var(--ink2);font-size:13px;font-weight:600}
@@ -111,19 +113,21 @@ let TAG=null, CFG=null;
 })();
 
 // ---- per-person state ----
-let state, picks, custCol, custTop, hidden, DATA=[], CLUSTERS=[], PEOPLE=[];
+let state, picks, custCol, custTop, hidden, rmTop, rmCol, DATA=[], CLUSTERS=[], PEOPLE=[];
 function pkey(k){return "aomM_"+TAG+"_"+k;}
 function loadUser(){
   state={score:CFG.guest?4:7,pickedonly:false,hidehidden:true,nowd:true,nopost:false,q:"",clusters:new Set(),people:new Set(),day:0};
   picks=new Set(JSON.parse(localStorage.getItem(pkey("picks"))||"[]"));
   hidden=new Set(JSON.parse(localStorage.getItem(pkey("hidden"))||"[]"));
+  rmTop=new Set(JSON.parse(localStorage.getItem(pkey("rmtop"))||"[]"));   // dropped built-in topics
+  rmCol=new Set(JSON.parse(localStorage.getItem(pkey("rmcol"))||"[]"));   // dropped built-in colleagues
   custCol=JSON.parse(localStorage.getItem(pkey("col"))||"[]");   // [[disp,[sn],[pf]]]
   custTop=JSON.parse(localStorage.getItem(pkey("top"))||"[]");   // [[key,tier,label,[kw]]]
   compute();
   state.clusters=new Set(CLUSTERS.map(c=>c.k));
 }
-function allClusters(){return CFG.clusters.concat(custTop);}
-function allColleagues(){return CFG.colleagues.concat(custCol);}
+function allClusters(){return CFG.clusters.concat(custTop).filter(c=>!rmTop.has(c[0]));}
+function allColleagues(){return CFG.colleagues.concat(custCol).filter(c=>!rmCol.has(c[0]));}
 function entCommunity(s){const t=s.ti.toLowerCase();
   return s.dv.includes("ENT")&&(["Meeting","Social Event","Plenary Session"].includes(s.t)
     ||/consortium|reception|business meeting|social|awards|plenary|keynote|presidential|doctoral|junior faculty|newcomer/.test(t));}
@@ -187,9 +191,9 @@ function renderApp(){
      <label><input type="checkbox" id="nopost"> hide posters</label>
      <label><input type="checkbox" id="hidehidden" checked> hide unlikely</label>
      <input type="search" id="q" placeholder="keyword…"></div>
-   <div class="bar bar2"><span class="lab">Topics</span><span class="setsel"><a id="tAll">all</a> · <a id="tNone">none</a></span>
+   <div class="bar bar2"><span class="lab">Topics</span><span class="setsel"><a id="tAll">all</a> · <a id="tNone">none</a><a id="tReset" style="display:none"> · restore removed</a></span>
      <span class="chips" id="chips"></span><span class="chip add" id="addTop">＋ topic</span></div>
-   <div class="bar bar2"><span class="lab">Colleagues</span><span class="setsel"><a id="pAll">all</a> · <a id="pNone">none</a></span>
+   <div class="bar bar2"><span class="lab">Colleagues</span><span class="setsel"><a id="pAll">all</a> · <a id="pNone">none</a><a id="pReset" style="display:none"> · restore removed</a></span>
      <span class="chips" id="pchips"></span><span class="chip add" id="addCol">＋ colleague</span></div>
    <div class="tabs" id="tabs"></div>
    <div class="wrap"><div class="daysum" id="daysum"></div><div class="grid" id="grid"></div><div class="od" id="odwrap"></div></div>
@@ -197,12 +201,16 @@ function renderApp(){
   wire();renderChips();render();
 }
 function renderChips(){
-  $("#chips").innerHTML=CLUSTERS.map(c=>`<span class="chip ${state.clusters.has(c.k)?'on':''}" data-k="${c.k}"><b>${c.k}</b> ${esc(c.label)}</span>`).join("");
-  $("#chips").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;
+  $("#chips").innerHTML=CLUSTERS.map(c=>`<span class="chip ${state.clusters.has(c.k)?'on':''}" data-k="${c.k}"><b>${c.k}</b> ${esc(c.label)}<span class="x" title="remove">×</span></span>`).join("");
+  $("#chips").querySelectorAll(".chip").forEach(ch=>ch.onclick=e=>{const k=ch.dataset.k;
+    if(e.target.classList.contains("x"))return removeTopic(k);
     state.clusters.has(k)?state.clusters.delete(k):state.clusters.add(k);ch.classList.toggle("on");render();});
-  $("#pchips").innerHTML=PEOPLE.map(n=>`<span class="chip pc ${n===CFG.me?'me ':''}${state.people.has(n)?'on':''}" data-n="${esc(n)}">${n===CFG.me?'<span class="st">★</span> You':esc(n.split(" ").pop())}</span>`).join("");
-  $("#pchips").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const n=ch.dataset.n;
+  $("#pchips").innerHTML=PEOPLE.map(n=>`<span class="chip pc ${n===CFG.me?'me ':''}${state.people.has(n)?'on':''}" data-n="${esc(n)}">${n===CFG.me?'<span class="st">★</span> You':esc(n.split(" ").pop())+'<span class="x" title="remove">×</span>'}</span>`).join("");
+  $("#pchips").querySelectorAll(".chip").forEach(ch=>ch.onclick=e=>{const n=ch.dataset.n;
+    if(e.target.classList.contains("x"))return removeColleague(n);
     state.people.has(n)?state.people.delete(n):state.people.add(n);ch.classList.toggle("on");render();});
+  if($("#tReset"))$("#tReset").style.display=rmTop.size?"inline":"none";
+  if($("#pReset"))$("#pReset").style.display=rmCol.size?"inline":"none";
 }
 function render(){
   const vis=DATA.filter(d=>passes(d));const grid=$("#grid");grid.innerHTML="";renderTabs();renderPicks();renderOD();
@@ -257,6 +265,14 @@ function addColleague(){const name=prompt("Colleague full name (e.g. Jane Q. Smi
   custCol.push([name.trim(),[t[t.length-1].toLowerCase()],[t[0].toLowerCase()]]);
   localStorage.setItem(pkey("col"),JSON.stringify(custCol));compute();renderChips();render();
   const hits=DATA.filter(d=>d.colleagues.includes(name.trim())).length;alert(hits?`Added — ${hits} session(s) flagged.`:"Added, but no sessions found for that name.");}
+function removeTopic(k){   // custom topics are deleted; built-ins go to a "removed" set that "restore" clears
+  if(k[0]==="+"){custTop=custTop.filter(c=>c[0]!==k);localStorage.setItem(pkey("top"),JSON.stringify(custTop));}
+  else{rmTop.add(k);localStorage.setItem(pkey("rmtop"),JSON.stringify([...rmTop]));}
+  state.clusters.delete(k);compute();renderChips();render();}
+function removeColleague(name){
+  if(custCol.some(c=>c[0]===name)){custCol=custCol.filter(c=>c[0]!==name);localStorage.setItem(pkey("col"),JSON.stringify(custCol));}
+  else{rmCol.add(name);localStorage.setItem(pkey("rmcol"),JSON.stringify([...rmCol]));}
+  state.people.delete(name);compute();renderChips();render();}
 function wire(){
   $("#theme").onclick=()=>{const r=document.documentElement,cur=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"),nx=cur==="dark"?"light":"dark";r.setAttribute("data-theme",nx);localStorage.setItem("aom_theme",nx);};
   $("#score").oninput=e=>{state.score=+e.target.value;$("#scoreV").textContent=e.target.value;render();};
@@ -269,6 +285,8 @@ function wire(){
   $("#tNone").onclick=()=>{state.clusters.clear();renderChips();render();};
   $("#pAll").onclick=()=>{state.people=new Set(PEOPLE);renderChips();render();};
   $("#pNone").onclick=()=>{state.people.clear();renderChips();render();};
+  $("#tReset").onclick=()=>{rmTop.clear();localStorage.setItem(pkey("rmtop"),"[]");compute();state.clusters=new Set(CLUSTERS.map(c=>c.k));renderChips();render();};
+  $("#pReset").onclick=()=>{rmCol.clear();localStorage.setItem(pkey("rmcol"),"[]");compute();renderChips();render();};
   $("#addTop").onclick=addTopic;$("#addCol").onclick=addColleague;
   $("#pswitch").onclick=()=>{localStorage.removeItem("aom_me");TAG=null;CFG=null;landing();};
   $("#score").value=state.score;$("#scoreV").textContent=state.score;
