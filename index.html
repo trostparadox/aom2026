@@ -109,7 +109,7 @@ let TAG=null, CFG=null;
 let state, picks, custCol, custTop, DATA=[], CLUSTERS=[], PEOPLE=[];
 function pkey(k){return "aomM_"+TAG+"_"+k;}
 function loadUser(){
-  state={score:7,pickedonly:false,colonly:false,nowd:true,nopost:false,q:"",clusters:new Set(),people:new Set(),day:0};
+  state={score:7,pickedonly:false,nowd:true,nopost:false,q:"",clusters:new Set(),people:new Set(),day:0};
   picks=new Set(JSON.parse(localStorage.getItem(pkey("picks"))||"[]"));
   custCol=JSON.parse(localStorage.getItem(pkey("col"))||"[]");   // [[disp,[sn],[pf]]]
   custTop=JSON.parse(localStorage.getItem(pkey("top"))||"[]");   // [[key,tier,label,[kw]]]
@@ -151,7 +151,7 @@ function passes(d,day){
   if(state.nopost&&d.type==="Poster")return false;
   const iscol=d.colleagues.length>0;
   if(state.people.size){ if(!d.colleagues.some(c=>state.people.has(c)))return false; }
-  else{ if(state.colonly&&!iscol)return false;
+  else{
     const on=d.clusters.filter(k=>state.clusters.has(k));
     if(!iscol&&d.clusters.length&&on.length===0)return false;
     if(!(d.score>=state.score||iscol||on.some(k=>NICHE().has(k))))return false; }
@@ -176,7 +176,6 @@ function renderApp(){
    <div class="bar sticky"><div><span class="lab" style="min-width:0">Relevance ≥</span>
      <input type="range" id="score" min="4" max="12" value="7"> <b id="scoreV">7</b></div>
      <label><input type="checkbox" id="pickedonly"> ★ my picks only</label>
-     <label><input type="checkbox" id="colonly"> any colleague</label>
      <label><input type="checkbox" id="nowd" checked> hide withdrawn</label>
      <label><input type="checkbox" id="nopost"> hide posters</label>
      <input type="search" id="q" placeholder="keyword…"></div>
@@ -251,7 +250,6 @@ function wire(){
   $("#theme").onclick=()=>{const r=document.documentElement,cur=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"),nx=cur==="dark"?"light":"dark";r.setAttribute("data-theme",nx);localStorage.setItem("aom_theme",nx);};
   $("#score").oninput=e=>{state.score=+e.target.value;$("#scoreV").textContent=e.target.value;render();};
   $("#pickedonly").onchange=e=>{state.pickedonly=e.target.checked;render();};
-  $("#colonly").onchange=e=>{state.colonly=e.target.checked;render();};
   $("#nowd").onchange=e=>{state.nowd=e.target.checked;render();};
   $("#nopost").onchange=e=>{state.nopost=e.target.checked;render();};
   $("#q").oninput=e=>{state.q=e.target.value;render();};
