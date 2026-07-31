@@ -36,7 +36,7 @@ input[type=search],input[type=text],input[type=email]{padding:5px 9px;border:1px
 .chip b{font-weight:700;color:var(--ink);margin-right:1px}
 .chip.on{color:#fff;background:var(--accent);border-color:var(--accent)}.chip.on b{color:#fff}
 .chip.pc.on{background:var(--brass);border-color:var(--brass);color:#fff}
-.chip.pc.me{border-color:var(--pick);color:var(--pick);font-weight:700}.chip.pc.me.on{background:var(--pick);border-color:var(--pick);color:#fff}
+.chip.pc.me{font-weight:700}.chip.pc.me .st{color:var(--pick)}.chip.pc.me.on{background:var(--pick);border-color:var(--pick);color:#fff}.chip.pc.me.on .st{color:#fff}
 .b.c.me{background:var(--pick);color:#fff}
 .ev.mine .rail{background:var(--pick)!important}
 .chip.add{border-style:dashed;color:var(--accent)}
@@ -192,7 +192,7 @@ function renderChips(){
   $("#chips").innerHTML=CLUSTERS.map(c=>`<span class="chip ${state.clusters.has(c.k)?'on':''}" data-k="${c.k}"><b>${c.k}</b> ${esc(c.label)}</span>`).join("");
   $("#chips").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;
     state.clusters.has(k)?state.clusters.delete(k):state.clusters.add(k);ch.classList.toggle("on");render();});
-  $("#pchips").innerHTML=PEOPLE.map(n=>`<span class="chip pc ${n===CFG.me?'me ':''}${state.people.has(n)?'on':''}" data-n="${esc(n)}">${n===CFG.me?'★ You':esc(n.split(" ").pop())}</span>`).join("");
+  $("#pchips").innerHTML=PEOPLE.map(n=>`<span class="chip pc ${n===CFG.me?'me ':''}${state.people.has(n)?'on':''}" data-n="${esc(n)}">${n===CFG.me?'<span class="st">★</span> You':esc(n.split(" ").pop())}</span>`).join("");
   $("#pchips").querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const n=ch.dataset.n;
     state.people.has(n)?state.people.delete(n):state.people.add(n);ch.classList.toggle("on");render();});
 }
