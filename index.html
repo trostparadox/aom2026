@@ -329,7 +329,37 @@ function landing(){
 }
 function guestCFG(){return {tag:"guest",name:"My planner",me:"",eh:"",gate:ALLDIVS,niche:[],colleagues:[],clusters:[],guest:true};}
 function enterGuest(){localStorage.setItem("aom_me","guest");TAG="guest";CFG=guestCFG();loadUser();renderApp();}
-function choose(t){localStorage.setItem("aom_me",t);TAG=t;CFG=CFGS[t];loadUser();renderApp();}
+function loadInto(t){localStorage.setItem("aom_me",t);TAG=t;CFG=CFGS[t];loadUser();renderApp();}
+function choose(t){   // offer to carry guest-mode work into a pre-config the first time it's opened
+  const g={gp:JSON.parse(localStorage.getItem("aomM_guest_picks")||"[]"),
+    gc:JSON.parse(localStorage.getItem("aomM_guest_col")||"[]"),
+    gt:JSON.parse(localStorage.getItem("aomM_guest_top")||"[]"),
+    gh:JSON.parse(localStorage.getItem("aomM_guest_hidden")||"[]")};
+  if((g.gp.length||g.gc.length||g.gt.length||g.gh.length)&&!localStorage.getItem("aomM_"+t+"_migrated")){askMigrate(t,g);return;}
+  loadInto(t);
+}
+function askMigrate(t,g){
+  $("#modalCard").innerHTML=`<h2>Bring your guest planner over?</h2>
+   <p class="meta">You've started a planner as a guest — <b>${g.gp.length}</b> favorite(s), <b>${g.gt.length}</b> topic(s), <b>${g.gc.length}</b> colleague(s). Add them to ${esc(CFGS[t].name)}'s pre-set planner? Your favorites and the pre-set topics/colleagues are all kept; exact duplicates are skipped.</p>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="mgY">Yes, bring them over</button><button class="btn" id="mgN">No, use the pre-set planner</button></div>`;
+  $("#modal").style.display="flex";
+  const done=()=>{localStorage.setItem("aomM_"+t+"_migrated","1");closeModal();loadInto(t);};
+  $("#mgY").onclick=()=>{mergeGuest(t,g);done();};
+  $("#mgN").onclick=done;
+}
+function mergeGuest(t,g){const K=k=>"aomM_"+t+"_"+k;
+  const uni=(key,arr)=>{const s=new Set(JSON.parse(localStorage.getItem(K(key))||"[]"));arr.forEach(x=>s.add(x));localStorage.setItem(K(key),JSON.stringify([...s]));};
+  uni("picks",g.gp); uni("hidden",g.gh);                                  // favorites + not-likely: union, never lost
+  const bc=CFGS[t].colleagues, cc=JSON.parse(localStorage.getItem(K("col"))||"[]");
+  const disp=new Set([...bc,...cc].map(c=>c[0].toLowerCase())), sn=new Set([...bc,...cc].flatMap(c=>c[1]));
+  g.gc.forEach(c=>{if(!disp.has(c[0].toLowerCase())&&!c[1].some(x=>sn.has(x))){cc.push(c);disp.add(c[0].toLowerCase());c[1].forEach(x=>sn.add(x));}});
+  localStorage.setItem(K("col"),JSON.stringify(cc));                       // colleagues: skip built-in / existing dupes
+  const lbl=new Set(CFGS[t].clusters.map(c=>c[2].toLowerCase()));
+  const ct=JSON.parse(localStorage.getItem(K("top"))||"[]"); ct.forEach(x=>lbl.add(x[2].toLowerCase()));
+  let n=ct.length;
+  g.gt.forEach(tp=>{if(!lbl.has(tp[2].toLowerCase())){n++;ct.push(["+"+n,tp[1],tp[2],tp[3]]);lbl.add(tp[2].toLowerCase());}});
+  localStorage.setItem(K("top"),JSON.stringify(ct));                       // topics: skip labels already present
+}
 function reqForm(email){
   const e=email||"";$("#modalCard").innerHTML=`<h2>Request your planner</h2>
    <p class="meta">This emails Steve Trost your details. He adds you to the planner and replies with the link — you'll type your name or email to load it.</p>
