@@ -197,7 +197,7 @@ function renderApp(){
     <div class="place">Academy of Management 2026 · Philadelphia · Jul 31 – Aug 4 · <a id="verlink">v${VERSION} · what's changed</a></div>
     <div class="legend"><span><i style="background:var(--pick)"></i>★ you present</span><span><i style="background:var(--brass)"></i>colleague</span>
     <span><i style="background:var(--free)"></i>open time</span><span>outlined = picked</span></div></div>
-    <div style="display:flex;gap:6px;align-items:flex-end"><button class="themebtn" id="pswitch" title="Switch person" style="width:auto;padding:0 9px">⇄</button><button class="themebtn" id="theme">◐</button></div></div>
+    <div style="display:flex;gap:6px;align-items:flex-end"><button class="themebtn" id="syncbtn" title="Sync / backup" style="width:auto;padding:0 9px">⇅</button><button class="themebtn" id="pswitch" title="Switch person" style="width:auto;padding:0 9px">⇄</button><button class="themebtn" id="theme">◐</button></div></div>
    <div class="bar sticky"><div id="relbox"><span class="lab" style="min-width:0">Relevance ≥</span>
      <input type="range" id="score" min="4" max="12" value="7"> <b id="scoreV">7</b></div>
      <label><input type="checkbox" id="pickedonly"> ★ my picks only</label>
@@ -341,6 +341,7 @@ function wire(){
   $("#addTop").onclick=addTopic;$("#addCol").onclick=addColleague;
   $("#pswitch").onclick=()=>{localStorage.removeItem("aom_me");TAG=null;CFG=null;landing();};
   $("#verlink").onclick=()=>showChangelog(CHANGELOG,false);
+  $("#syncbtn").onclick=syncPanel;
   $("#score").value=state.score;$("#scoreV").textContent=state.score;
   if(CFG.guest)$("#relbox").style.display="none";
 }
@@ -430,6 +431,46 @@ function mergeGuest(t,g){const K=k=>"aomM_"+t+"_"+k;
   g.gt.forEach(tp=>{if(!lbl.has(tp[2].toLowerCase())){n++;ct.push(["+"+n,tp[1],tp[2],tp[3]]);lbl.add(tp[2].toLowerCase());}});
   localStorage.setItem(K("top"),JSON.stringify(ct));                       // topics: skip labels already present
 }
+// ---- device sync / backup (merge, never overwrite) ----
+function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");return decodeURIComponent(escape(atob(s)));}
+function syncPayload(){const K=k=>"aomM_"+TAG+"_"+k,g=k=>JSON.parse(localStorage.getItem(K(k))||"[]");
+  return {v:1,tag:TAG,picks:g("picks"),top:g("top"),col:g("col"),hidden:g("hidden"),rmtop:g("rmtop"),rmcol:g("rmcol"),hidetypes:g("hidetypes")};}
+function syncCode(){return b64e(JSON.stringify(syncPayload()));}
+function syncLink(){return location.origin+location.pathname+"#sync="+syncCode();}
+function applySync(p){const tag=p.tag,K=k=>"aomM_"+tag+"_"+k;
+  const uni=(k,a)=>{const s=new Set(JSON.parse(localStorage.getItem(K(k))||"[]"));(a||[]).forEach(x=>s.add(x));localStorage.setItem(K(k),JSON.stringify([...s]));};
+  uni("picks",p.picks);uni("hidden",p.hidden);uni("rmtop",p.rmtop);uni("rmcol",p.rmcol);uni("hidetypes",p.hidetypes);
+  const bc=CFGS[tag]?CFGS[tag].colleagues:[],cc=JSON.parse(localStorage.getItem(K("col"))||"[]");
+  const disp=new Set([...bc,...cc].map(c=>c[0].toLowerCase())),sn=new Set([...bc,...cc].flatMap(c=>c[1]));
+  (p.col||[]).forEach(c=>{if(!disp.has(c[0].toLowerCase())&&!c[1].some(x=>sn.has(x))){cc.push(c);disp.add(c[0].toLowerCase());c[1].forEach(x=>sn.add(x));}});
+  localStorage.setItem(K("col"),JSON.stringify(cc));
+  const lbl=new Set((CFGS[tag]?CFGS[tag].clusters:[]).map(c=>c[2].toLowerCase())),ct=JSON.parse(localStorage.getItem(K("top"))||"[]");
+  ct.forEach(x=>lbl.add(x[2].toLowerCase()));let n=ct.length;
+  (p.top||[]).forEach(tp=>{if(!lbl.has(tp[2].toLowerCase())){n++;ct.push(["+"+n,tp[1],tp[2],tp[3]]);lbl.add(tp[2].toLowerCase());}});
+  localStorage.setItem(K("top"),JSON.stringify(ct));return tag;}
+function offerSync(code){let p;try{p=JSON.parse(b64d((code||"").trim()));}catch(e){alert("That sync code couldn't be read.");return;}
+  if(!p||p.v!==1||!p.tag){alert("That sync code couldn't be read.");return;}
+  if(p.tag!=="guest"&&!CFGS[p.tag]){alert("This sync is for a planner that isn't set up on this device.");return;}
+  const who=p.tag==="guest"?"a guest planner":CFGS[p.tag].name+"'s planner";
+  $("#modalCard").innerHTML=`<h2>Merge synced planner?</h2>
+    <p class="meta">Brings in <b>${(p.picks||[]).length}</b> favorite(s), <b>${(p.top||[]).length}</b> topic(s), <b>${(p.col||[]).length}</b> colleague(s) from ${esc(who)}. Nothing is overwritten — items merge and duplicates are skipped.</p>
+    <div style="display:flex;gap:8px"><button class="btn pri" id="syncGo">Merge</button><button class="btn" onclick="closeModal()">Cancel</button></div>`;
+  $("#modal").style.display="flex";
+  $("#syncGo").onclick=()=>{const tag=applySync(p);closeModal();localStorage.setItem("aom_me",tag);TAG=tag;CFG=tag==="guest"?guestCFG():CFGS[tag];loadUser();renderApp();};}
+function syncPanel(){const code=syncCode(),link=syncLink();
+  $("#modalCard").innerHTML=`<h2>Sync / backup</h2>
+   <p class="meta">Move this planner to another device or keep a backup. On the other device, open the link or paste the code — it merges in, nothing is lost. (The link carries your data in the part after #, which never leaves your device.)</p>
+   <b>This device → elsewhere</b>
+   <div style="display:flex;gap:8px;margin:6px 0"><button class="btn pri" id="cpLink">Copy sync link</button><button class="btn" id="cpCode">Copy code</button></div>
+   <textarea id="syncOut" readonly style="width:100%;height:62px;font-size:11px;font-family:var(--mono)">${esc(code)}</textarea>
+   <b style="display:block;margin-top:14px">Elsewhere → this device</b>
+   <textarea id="syncIn" placeholder="paste a sync code here" style="width:100%;height:56px;font-size:11px;font-family:var(--mono);margin-top:4px"></textarea>
+   <div style="display:flex;gap:8px;margin-top:6px"><button class="btn pri" id="syncImport">Merge pasted code</button><button class="btn" onclick="closeModal()">Close</button></div>`;
+  $("#modal").style.display="flex";
+  $("#cpLink").onclick=()=>navigator.clipboard.writeText(link).then(()=>alert("Sync link copied — open it on your other device.")).catch(()=>{});
+  $("#cpCode").onclick=()=>navigator.clipboard.writeText(code).then(()=>alert("Code copied.")).catch(()=>{});
+  $("#syncImport").onclick=()=>{const c=$("#syncIn").value.trim();if(c)offerSync(c);};}
 function reqForm(email){
   const e=email||"";$("#modalCard").innerHTML=`<h2>Request your planner</h2>
    <p class="meta">This emails Steve Trost your details. He adds you to the planner and replies with the link — you'll type your name or email to load it.</p>
@@ -447,5 +488,7 @@ function reqForm(email){
 }
 (function(){const t=localStorage.getItem("aom_theme");if(t)document.documentElement.setAttribute("data-theme",t);
   $("#modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
-  if(CFG){loadUser();renderApp();}else{landing();}})();
+  const boot=()=>{if(CFG){loadUser();renderApp();}else{landing();}};
+  const hs=(location.hash||"").match(/^#sync=(.+)$/);
+  if(hs){boot();history.replaceState(null,"",location.pathname);offerSync(decodeURIComponent(hs[1]));}else boot();})();
 </script></body></html>
