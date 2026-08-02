@@ -101,10 +101,13 @@ const PROG=[{"i": "10015", "t": "Poster", "dv": ["ENT"], "dy": 2, "s": 870, "e":
 const ALLDIVS=[...new Set(PROG.flatMap(s=>s.dv))];   // guest mode: every division in-gate
 const ID2DAY={};for(const s of PROG)ID2DAY[s.i]=s.dy;   // session id -> day index, for selective (per-day) sync
 const TOPIC_LIB=[["Uncertainty & judgment", ["knightian", "radical uncertainty", "uncertaint", "\\bambiguit", "\\bjudgment", "\\bjudgement", "\\bdoubt", "unknowab"]], ["Opportunity", ["\\bopportunit", "alertness", "opportunity recognition", "opportunity belief"]], ["Austrian economics", ["austrian", "\\bmises\\b", "kirzner", "\\bhayek", "\\bmenger", "praxeolog", "subjectivis", "entrepreneurial judgment", "judgment-based", "subjective value"]], ["AI & machine intelligence", ["artificial intelligence", "generative ai", "machine learning", "\\bllm", "human-ai", "\\balgorithm", "agentic", "\\bai\\b", "machine judgment"]], ["Theory-building & methods", ["theory of the entrepreneur", "theory building", "theoriz", "philosophy of science", "conceptual paper", "grand theory", "phenomenolog"]], ["Entrepreneurial action", ["entrepreneurial action", "entrepreneurial agency", "effectuation", "experimentation", "new venture", "venture creation", "nascent"]], ["Cognition, motivation & passion", ["\\bcognition", "\\bmotivation", "regulatory focus", "\\bpassion", "self-efficacy", "entrepreneurial intention", "\\bmindset", "imagination"]], ["Social & sustainable entrepreneurship", ["social entrepreneur", "sustainable entrepreneur", "development entrepreneur", "\\bpoverty", "empowerment", "base of the pyramid", "prosocial", "grand challenge", "\\binclusiv", "impact entrepreneur"]], ["Governance & stakeholders", ["governance", "stakeholder", "corporate governance", "organizational economics", "ownership", "transaction cost"]], ["Gender & diversity", ["gender", "\\bwomen", "board diversity", "diversity", "female entrepreneur"]], ["International & comparative", ["international entrepreneur", "transnational", "cross-national", "global entrepreneur", "comparative", "emerging market"]], ["Theory of the firm", ["firm boundaries", "division of labor", "theory of the firm", "organiz", "value creation", "institutional", "economic growth", "regulation", "\\bpolicy"]], ["Innovation & technology", ["innovation", "industry evolution", "industry creation", "industry emergence", "spin-?out", "employee entrepreneurship", "human capital", "knowledge", "capabilit", "technology"]], ["Strategy & resources", ["competitive advantage", "value capture", "corporate strateg", "resource", "diversif"]], ["Free enterprise & markets", ["free enterprise", "free market", "capitalism", "prosperity", "liberty", "markets"]], ["Ethics & philosophy", ["\\bethic", "\\bmoral", "authenticity", "legitimacy", "emancipation", "entrepreneuring"]], ["Venture financing", ["venture capital", "\\bfinanc", "funding", "crowdfunding", "angel investor", "\\bipo\\b"]], ["Decision-making & behavior", ["decision-making", "decision making", "behavioral", "heuristic", "\\bbias", "negotiat"]], ["Blockchain & decentralized governance", ["blockchain", "distributed ledger", "cryptocurrenc", "\\bcrypto\\b", "\\bdao\\b", "web3", "smart contract", "tokeniz", "decentralized govern", "algorithmic governance", "decentralized autonomous"]], ["Entrepreneurial ecosystems", ["entrepreneurial ecosystem", "innovation ecosystem", "economic development"]], ["Family business", ["family business", "family firm", "succession", "next generation", "family enterprise"]], ["Digital platforms & transformation", ["\\bplatform", "digital transformation", "digitali", "two-sided market", "network effect", "gig economy", "sharing economy"]], ["Sustainability & climate", ["sustainab", "\\bclimate", "\\bcarbon", "\\besg\\b", "circular economy", "environmental", "decarboniz", "net.?zero"]], ["Leadership", ["leadership", "\\bceo\\b", "executive", "upper echelon", "top management team", "\\btmt\\b", "transformational lead", "charismatic lead"]], ["Teams & collaboration", ["\\bteam", "collaborat", "coordination", "teamwork", "group performance"]], ["Careers & the future of work", ["\\bcareer", "future of work", "remote work", "hybrid work", "gig work", "job design"]], ["Corporate strategy & M&A", ["acquisition", "\\bmerger", "\\bm&a\\b", "divestiture", "corporate strateg", "diversification", "\\balliance", "joint venture"]], ["Networks & social capital", ["social network", "social capital", "structural hole", "brokerage", "network position", "network tie"]], ["Healthcare & well-being", ["health care", "healthcare", "\\bhospital", "well-being", "wellbeing", "\\bburnout", "mental health"]], ["Nonprofits & public management", ["nonprofit", "non-profit", "public management", "philanthrop", "\\bngo\\b", "\\bcivic", "social sector"]], ["Qualitative & mixed methods", ["qualitative", "ethnograph", "grounded theory", "case study", "mixed method", "\\binterview"]], ["Culture & identity", ["\\bculture", "organizational identity", "sensemaking", "institutional logic", "identity work"]]];   // catalog for the "add topic" picker
-const VERSION="1.7";
+const VERSION="1.8";
 const CHANGELOG=[   // newest first — on each release, bump VERSION and add an entry at the TOP
+ {v:"1.8",date:"Aug 2, 2026",notes:[
+   "In My schedule, the ✕ now hides a session from that list (it stays starred and on the timeline) instead of un-starring it, and sessions that finished more than an hour ago drop off the list automatically so it stays focused on what's next. Tap “show all” to see finished or hidden items, and ↩ to bring one back."]},
  {v:"1.7",date:"Aug 2, 2026",notes:[
-   "Sync now lets you choose what to include — Schedule, Not-likely, Topics, Colleagues, Type filters — and which days, with a live indicator showing whether it fits a QR. If the full sync is too big for a QR, unchecking the Not-likely list (usually the biggest) or narrowing the days makes it fit; the link and code always carry everything you've checked."]},
+   "Sync now lets you choose what to include — Schedule, Not-likely, Topics, Colleagues, Type filters — and which days, with a live indicator showing whether it fits a QR. If the full sync is too big for a QR, unchecking the Not-likely list (usually the biggest) or narrowing the days makes it fit; the link and code always carry everything you've checked.",
+   "Sync sends only what's changed since your last sync by default, so repeat syncs (and their QR codes) stay small; untick “Only changes since last sync” to re-send everything."]},
  {v:"1.6",date:"Aug 2, 2026",notes:[
    "The full-details page (“Full details ↗”) now opens in a tab that closes when you tap “← Back to planner,” returning you to your planner — instead of leaving a second copy of the planner open in that tab."]},
  {v:"1.5",date:"Aug 2, 2026",notes:[
@@ -145,7 +148,7 @@ let TAG=null, CFG=null;
 })();
 
 // ---- per-person state ----
-let state, picks, custCol, custTop, hidden, rmTop, rmCol, hideTypes, DATA=[], CLUSTERS=[], PEOPLE=[];
+let state, picks, custCol, custTop, hidden, rmTop, rmCol, hideTypes, schedHidden, DATA=[], CLUSTERS=[], PEOPLE=[];
 function pkey(k){return "aomM_"+TAG+"_"+k;}
 function defaultDay(){   // open on today's conference day (clamped to the 5 days); the fixed 2026 dates match DAYS above
   const CD=[20260731,20260801,20260802,20260803,20260804];
@@ -154,10 +157,11 @@ function defaultDay(){   // open on today's conference day (clamped to the 5 day
   return 0;   // before the conference → first day
 }
 function loadUser(){
-  state={score:CFG.guest?4:7,pickedonly:false,hidehidden:true,nowd:true,q:"",clusters:new Set(),people:new Set(),day:defaultDay(),
+  state={score:CFG.guest?4:7,pickedonly:false,hidehidden:true,nowd:true,q:"",clusters:new Set(),people:new Set(),day:defaultDay(),schedShowAll:false,
     sideCollapsed:(localStorage.getItem(pkey("sidecol"))!==null?localStorage.getItem(pkey("sidecol"))==="1":window.innerWidth<700)};
   picks=new Set(JSON.parse(localStorage.getItem(pkey("picks"))||"[]"));
   hidden=new Set(JSON.parse(localStorage.getItem(pkey("hidden"))||"[]"));
+  schedHidden=new Set(JSON.parse(localStorage.getItem(pkey("schedhide"))||"[]"));   // dismissed from the My-schedule list (still starred)
   rmTop=new Set(JSON.parse(localStorage.getItem(pkey("rmtop"))||"[]"));   // dropped built-in topics
   rmCol=new Set(JSON.parse(localStorage.getItem(pkey("rmcol"))||"[]"));   // dropped built-in colleagues
   hideTypes=new Set(JSON.parse(localStorage.getItem(pkey("hidetypes"))||"[]"));   // hidden session types
@@ -287,12 +291,23 @@ function render(){
 }
 function renderTabs(){$("#tabs").innerHTML=DAYS.map((d,i)=>`<div class="tab ${i==state.day?'on':''}" onclick="setDay(${i})">${d.abbr}<span class="d">${d.date} · ${DATA.filter(x=>passes(x,i)).length}</span></div>`).join("");}
 function renderOD(){$("#odwrap").innerHTML="";}
-function renderPicks(){const ps=DATA.filter(d=>picks.has(d.id)).sort((a,b)=>a.day-b.day||a.sMin-b.sMin);
+function renderPicks(){const all=DATA.filter(d=>picks.has(d.id)).sort((a,b)=>a.day-b.day||a.sMin-b.sMin);
+  const isHidden=d=>schedHidden.has(d.id)||schedPast(d);          // dismissed OR finished ≥1h ago
+  const ps=state.schedShowAll?all:all.filter(d=>!isHidden(d));
+  const nHidden=all.filter(isHidden).length;
   const side=$("#side");side.classList.toggle("collapsed",state.sideCollapsed);
-  side.innerHTML=`<h3 id="sideHdr"><span>${state.sideCollapsed?'▸':'▾'} ★ My schedule · ${ps.length}</span>${ps.length?'<button class="btn" id="sideCopy">copy</button>':''}</h3>`+
-    `<div class="sidebody">`+(ps.length?ps.map(d=>`<div class="row"><a onclick="toggle('${d.id}')">✕</a><span class="tm">${DAYS[d.day].abbr} ${fmt(d.sMin)}–${fmt(d.eMin)}</span> · ${esc(d.room)}<br>${esc(d.title)}</div>`).join(''):'<div class="empty">Tap ★ on a session to build your schedule.</div>')+`</div>`;
+  const allLink=nHidden>0?`<a id="schedAll" style="float:none;font-size:11px">${state.schedShowAll?'hide done':nHidden+' hidden · show all'}</a>`:'';
+  side.innerHTML=`<h3 id="sideHdr"><span>${state.sideCollapsed?'▸':'▾'} ★ My schedule · ${ps.length}${(state.schedShowAll&&nHidden)?' of '+all.length:''}</span><span style="display:inline-flex;gap:10px;align-items:center">${allLink}${all.length?'<button class="btn" id="sideCopy">copy</button>':''}</span></h3>`+
+    `<div class="sidebody">`+(ps.length?ps.map(d=>{const dism=schedHidden.has(d.id),act=dism?`<a onclick="schedRestore('${d.id}')" title="bring back to list">↩</a>`:`<a onclick="schedDismiss('${d.id}')" title="hide from this list (stays starred)">✕</a>`;
+      return `<div class="row"${isHidden(d)?' style="opacity:.5"':''}>${act}<span class="tm">${DAYS[d.day].abbr} ${fmt(d.sMin)}–${fmt(d.eMin)}</span> · ${esc(d.room)}<br>${esc(d.title)}</div>`;}).join(''):`<div class="empty">${all.length?'Nothing coming up — tap “show all” to see finished or hidden items.':'Tap ★ on a session to build your schedule.'}</div>`)+`</div>`;
   $("#sideHdr").onclick=toggleSide;
+  if($("#schedAll"))$("#schedAll").onclick=e=>{e.stopPropagation();toggleSchedAll();};
   if($("#sideCopy"))$("#sideCopy").onclick=e=>{e.stopPropagation();copyPicks();};}
+function schedPast(d){const md=[[6,31],[7,1],[7,2],[7,3],[7,4]][d.day];if(!md)return false;
+  return (new Date()-new Date(2026,md[0],md[1],Math.floor(d.eMin/60),d.eMin%60))>=3600000;}   // event fully over ≥1h ago
+function schedDismiss(id){schedHidden.add(id);localStorage.setItem(pkey("schedhide"),JSON.stringify([...schedHidden]));renderPicks();}
+function schedRestore(id){schedHidden.delete(id);localStorage.setItem(pkey("schedhide"),JSON.stringify([...schedHidden]));renderPicks();}
+function toggleSchedAll(){state.schedShowAll=!state.schedShowAll;renderPicks();}
 function toggleSide(){state.sideCollapsed=!state.sideCollapsed;localStorage.setItem(pkey("sidecol"),state.sideCollapsed?"1":"0");renderPicks();}
 function detail(d){$("#modalCard").innerHTML=`<h2>${esc(d.title)}${d.withdrawn?' <span style="color:var(--warn);font-size:13px">· withdrawn</span>':''}</h2>
   <div class="meta">${d.dayname} ${d.date} · ${fmt(d.sMin)}–${fmt(d.eMin)} · ${esc(d.type)}<br>${esc(d.venue)} — ${esc(d.room)}<br>Divisions ${esc(d.divs.join(", "))} · Clusters ${esc(d.clusters.join(", "))} · relevance ${d.score}${d.colleagues.length?`<br><span style="color:var(--brass);font-weight:600">Colleagues: ${esc(d.colleagues.map(c=>c===CFG.me?'You':c).join(", "))}</span>`:''}</div>
@@ -307,7 +322,7 @@ function showGuide(){
    <h3>Reading a day</h3>
    <p>Each day is a tab. Sessions sit on a time grid, and clashing ones show <b>side by side</b> so conflicts are obvious. Green <b>OPEN</b> bands are your free time. A brass edge means a <b>colleague</b> is on the session; a gold <b>★ You</b> badge means you're on it.</p>
    <h3>Build your schedule</h3>
-   <p>Tap the <b>★</b> on a session to add it to <b>My schedule</b> (bottom-right; “copy” exports the list). Starred sessions stay visible no matter how you filter.</p>
+   <p>Tap the <b>★</b> on a session to add it to <b>My schedule</b> (bottom-right; “copy” exports the list). Starred sessions stay visible no matter how you filter. In the My-schedule list, <b>✕</b> hides a row from that list — it stays starred and on the grid — and sessions that finished over an hour ago drop off on their own; tap <b>show all</b> to see finished or hidden items and <b>↩</b> to bring one back.</p>
    <h3>Narrowing things down</h3>
    <ul>
    <li><b>Relevance</b> slider (pre-set planners) — higher shows only your strongest matches; OPEN fills the rest.</li>
@@ -319,7 +334,7 @@ function showGuide(){
    <h3>Full session details</h3>
    <p>Tap a session, then <b>Full details ↗</b> for the complete page — everyone with their roles, the abstract, and each paper — in a new tab. Each has its own shareable link.</p>
    <h3>Two devices &amp; backup</h3>
-   <p>Tap <b>⇅</b> to sync: copy a link or code on one device and merge it on another — nothing is overwritten. That same code is your backup; keep it and re-import after a browser wipe or on a new phone.</p>
+   <p>Tap <b>⇅</b> to sync: copy a link or code — or show a QR to scan — on one device and merge it on another; nothing is overwritten. By default it sends only what's changed since your last sync, so repeat syncs (and their QR codes) stay small; untick <b>Only changes since last sync</b> to send everything, or use the section and day checkboxes to trim it further. That same code is your backup; keep it and re-import after a browser wipe or on a new phone.</p>
    <h3>Good to know</h3>
    <p>Everything saves in <b>your own browser on this device</b> — nothing is tracked or sent anywhere. <b>⇄</b> switches planners; <b>◐</b> toggles light/dark. Missing something in a pre-set planner? Add it yourself, or use “Request a custom planner”.</p>
    </div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn pri" onclick="closeModal()">Got it</button></div>`;
@@ -347,7 +362,8 @@ function showUpdateBanner(v){if($("#updbar"))return;
   document.body.appendChild(b);$("#updbtn").onclick=()=>location.reload();}
 function copyPicks(){const ps=DATA.filter(d=>picks.has(d.id)).sort((a,b)=>a.day-b.day||a.sMin-b.sMin);
   navigator.clipboard.writeText(ps.map(d=>DAYS[d.day].abbr+" "+d.date+"  "+fmt(d.sMin)+"-"+fmt(d.eMin)+"  ["+d.room+"]  "+d.title).join("\n")).then(()=>alert("Copied "+ps.length+" sessions."));}
-function toggle(id){picks.has(id)?picks.delete(id):picks.add(id);localStorage.setItem(pkey("picks"),JSON.stringify([...picks]));render();}
+function toggle(id){if(picks.has(id)){picks.delete(id);if(schedHidden.delete(id))localStorage.setItem(pkey("schedhide"),JSON.stringify([...schedHidden]));}else picks.add(id);
+  localStorage.setItem(pkey("picks"),JSON.stringify([...picks]));render();}
 function toggleHide(id){hidden.has(id)?hidden.delete(id):hidden.add(id);localStorage.setItem(pkey("hidden"),JSON.stringify([...hidden]));closeModal();render();}
 function setDay(i){state.day=i;render();scrollTo({top:0,behavior:"smooth"});}
 function addTopic(){   // pick from the catalog, or fall through to a custom keyword topic
@@ -629,15 +645,23 @@ function b64d(s){s=s.replace(/-/g,"+").replace(/_/g,"/");return decodeURICompone
 function syncPayload(opts){const K=k=>"aomM_"+TAG+"_"+k,g=k=>JSON.parse(localStorage.getItem(K(k))||"[]");
   opts=opts||{};const days=opts.days||null;   // Set of day indices to keep (null = all days); applies to id-bearing lists
   const byDay=arr=>days?arr.filter(id=>days.has(ID2DAY[id])):arr;
+  const base=opts.base||null;   // "only since last sync": drop items already carried in a prior sync from this device
+  const sub=(k,arr,idOf)=>{if(!base)return arr;const id=idOf||(x=>x),s=new Set((base[k]||[]).map(id));return arr.filter(x=>!s.has(id(x)));};
   const o={v:1,tag:TAG};
-  if(opts.picks!==false)  o.picks=byDay(g("picks"));
-  if(opts.hidden!==false) o.hidden=byDay(g("hidden"));
-  if(opts.topics!==false){o.top=g("top");o.rmtop=g("rmtop");}
-  if(opts.cols!==false)  {o.col=g("col");o.rmcol=g("rmcol");}
-  if(opts.types!==false)  o.hidetypes=g("hidetypes");
+  if(opts.picks!==false)  o.picks=sub("picks",byDay(g("picks")));
+  if(opts.hidden!==false) o.hidden=sub("hidden",byDay(g("hidden")));
+  if(opts.topics!==false){o.top=sub("top",g("top"),t=>t[2]);o.rmtop=sub("rmtop",g("rmtop"));}
+  if(opts.cols!==false)  {o.col=sub("col",g("col"),c=>c[0]);o.rmcol=sub("rmcol",g("rmcol"));}
+  if(opts.types!==false)  o.hidetypes=sub("hidetypes",g("hidetypes"));
   return o;}
 function syncCode(opts){return b64e(JSON.stringify(syncPayload(opts)));}
 function syncLink(opts){return location.origin+location.pathname+"#sync="+syncCode(opts);}
+function syncBaseGet(){return JSON.parse(localStorage.getItem("aomM_"+TAG+"_syncbase")||"null");}   // what THIS device has already emitted (identity-deduped)
+function markSynced(emitted,base){const K=k=>"aomM_"+TAG+"_"+k;   // union what was just sent into the baseline, so next time only newer items go
+  const merge=(k,idOf)=>{const id=idOf||(x=>x),seen=new Set(),out=[];
+    for(const x of ((base&&base[k])||[]).concat(emitted[k]||[])){const key=id(x);if(!seen.has(key)){seen.add(key);out.push(x);}}return out;};
+  localStorage.setItem(K("syncbase"),JSON.stringify({picks:merge("picks"),hidden:merge("hidden"),top:merge("top",t=>t[2]),
+    col:merge("col",c=>c[0]),rmtop:merge("rmtop"),rmcol:merge("rmcol"),hidetypes:merge("hidetypes"),t:Date.now()}));}
 function applySync(p){const tag=p.tag,K=k=>"aomM_"+tag+"_"+k;
   const uni=(k,a)=>{const s=new Set(JSON.parse(localStorage.getItem(K(k))||"[]"));(a||[]).forEach(x=>s.add(x));localStorage.setItem(K(k),JSON.stringify([...s]));};
   uni("picks",p.picks);uni("hidden",p.hidden);uni("rmtop",p.rmtop);uni("rmcol",p.rmcol);uni("hidetypes",p.hidetypes);
@@ -662,9 +686,12 @@ function syncPanel(){
   const g=k=>JSON.parse(localStorage.getItem("aomM_"+TAG+"_"+k)||"[]");
   const np=g("picks").length,nh=g("hidden").length,nt=g("top").length+g("rmtop").length,nc=g("col").length+g("rmcol").length,ntt=g("hidetypes").length;
   const inc=(k,lbl,n)=>`<label class="tychk"><input type="checkbox" data-inc="${k}" checked> ${lbl} <span style="color:var(--ink2)">${n}</span></label>`;
+  const base=syncBaseGet();
+  const sinceNote=base?"last sync "+new Date(base.t).toLocaleDateString(undefined,{month:"short",day:"numeric"})+", "+new Date(base.t).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"}):"first sync — sends everything";
   $("#modalCard").innerHTML=`<h2>Sync / backup</h2>
    <p class="meta">Move this planner to another device or keep a backup. On the other device, open the link or paste the code — it merges in, nothing is lost. (The link carries your data in the part after #, which never leaves your device.)</p>
    <b>This device → elsewhere</b>
+   <label class="tychk" style="margin:6px 0 2px"><input type="checkbox" id="syncSince" checked> Only changes since last sync <span style="color:var(--ink2)">· ${sinceNote}</span></label>
    <div class="meta" style="margin:6px 0 2px">Include:</div>
    <div id="syncInc">${inc("picks","★ Schedule",np)}${inc("hidden","✕ Not-likely",nh)}${inc("topics","Topics",nt)}${inc("cols","Colleagues",nc)}${inc("types","Type filters",ntt)}</div>
    <div id="syncDays" style="margin:4px 0 2px"><span class="meta">Days <span style="color:var(--ink2)">(Schedule &amp; Not-likely only)</span>: </span>${DAYS.map((d,i)=>`<label class="tychk"><input type="checkbox" data-day="${i}" checked> ${d.abbr}</label>`).join("")}</div>
@@ -679,29 +706,31 @@ function syncPanel(){
   let curCode="",curLink="";
   const readOpts=()=>{const o={};document.querySelectorAll('#syncInc input[data-inc]').forEach(cb=>o[cb.dataset.inc]=cb.checked);
     const days=new Set();document.querySelectorAll('#syncDays input[data-day]').forEach(cb=>{if(cb.checked)days.add(+cb.dataset.day);});
-    return {picks:o.picks,hidden:o.hidden,topics:o.topics,cols:o.cols,types:o.types,days:days.size===DAYS.length?null:days};};
+    return {picks:o.picks,hidden:o.hidden,topics:o.topics,cols:o.cols,types:o.types,days:days.size===DAYS.length?null:days,base:$("#syncSince").checked?base:null};};
   const renderQR=()=>{const box=$("#qrBox");box.innerHTML="";
     const r=qrCanvas(curLink,260);
-    if(!r){box.innerHTML='<p class="meta">Too big for a scannable QR — uncheck a section (the Not-likely list is usually the biggest) or narrow the Days, then it will appear.</p>';return;}
+    if(!r){box.innerHTML='<p class="meta">Too big for a scannable QR — uncheck a section (the Not-likely list is usually the biggest) or narrow the Days, then it will appear.</p>';return false;}
     r.cv.style.cssText="width:min(260px,72vw);height:auto;image-rendering:pixelated;background:#fff;padding:10px;border-radius:8px";
     box.appendChild(r.cv);
     const cap=document.createElement("p");cap.className="meta";cap.style.marginTop="6px";
     cap.textContent="Point the other device's camera at this to open your planner there.";
-    box.appendChild(cap);};
-  const refresh=()=>{const opts=readOpts();
-    curCode=b64e(JSON.stringify(syncPayload(opts)));curLink=location.origin+location.pathname+"#sync="+curCode;
+    box.appendChild(cap);return true;};
+  const refresh=()=>{const opts=readOpts(),p=syncPayload(opts);
+    curCode=b64e(JSON.stringify(p));curLink=location.origin+location.pathname+"#sync="+curCode;
     $("#syncOut").value=curCode;
-    const v=qrChooseVersion(utf8bytes(curLink),20),fit=$("#syncFit");
-    if(v>0){fit.textContent="✓ Fits a QR · version "+v+" · "+curCode.length+" characters";fit.style.color="var(--ink)";}
-    else{const hint=(opts.hidden!==false&&nh>20)?" — the Not-likely list ("+nh+") is the biggest; uncheck it or narrow Days to fit.":" — uncheck a section or narrow Days to fit.";
-      fit.textContent="✕ Too big for a QR (the link and code still work)"+hint;fit.style.color="var(--ink2)";}
+    const fit=$("#syncFit"),items=["picks","hidden","top","col","rmtop","rmcol","hidetypes"].reduce((s,k)=>s+((p[k]||[]).length),0);
+    if(opts.base&&items===0){fit.textContent="Nothing new since your last sync — untick “Only changes since last sync” to re-send everything.";fit.style.color="var(--ink2)";}
+    else{const v=qrChooseVersion(utf8bytes(curLink),20);
+      if(v>0){fit.textContent="✓ Fits a QR · version "+v+" · "+curCode.length+" characters"+(opts.base?" · changes only":"");fit.style.color="var(--ink)";}
+      else{const hint=(opts.hidden!==false&&nh>20)?" — the Not-likely list ("+nh+") is the biggest; uncheck it or narrow Days to fit.":" — uncheck a section or narrow Days to fit.";
+        fit.textContent="✕ Too big for a QR (the link and code still work)"+hint;fit.style.color="var(--ink2)";}}
     if($("#qrBox").dataset.open==="1")renderQR();};
-  document.querySelectorAll('#syncInc input,#syncDays input').forEach(cb=>cb.onchange=refresh);
-  $("#cpLink").onclick=()=>navigator.clipboard.writeText(curLink).then(()=>alert("Sync link copied — open it on your other device.")).catch(()=>{});
-  $("#cpCode").onclick=()=>navigator.clipboard.writeText(curCode).then(()=>alert("Code copied.")).catch(()=>{});
+  document.querySelectorAll('#syncInc input,#syncDays input,#syncSince').forEach(cb=>cb.onchange=refresh);
+  $("#cpLink").onclick=()=>navigator.clipboard.writeText(curLink).then(()=>{markSynced(syncPayload(readOpts()),base);alert("Sync link copied — open it on your other device.");}).catch(()=>{});
+  $("#cpCode").onclick=()=>navigator.clipboard.writeText(curCode).then(()=>{markSynced(syncPayload(readOpts()),base);alert("Code copied.");}).catch(()=>{});
   $("#showQR").onclick=()=>{const box=$("#qrBox"),btn=$("#showQR");
     if(box.dataset.open==="1"){box.dataset.open="0";box.innerHTML="";btn.textContent="Show QR";return;}
-    box.dataset.open="1";btn.textContent="Hide QR";renderQR();};
+    box.dataset.open="1";btn.textContent="Hide QR";if(renderQR())markSynced(syncPayload(readOpts()),base);};
   $("#syncImport").onclick=()=>{const c=$("#syncIn").value.trim();if(c)offerSync(c);};
   refresh();}
 function reqForm(email){
