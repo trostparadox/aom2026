@@ -18,6 +18,8 @@ h2{font-family:var(--serif);font-size:16px;margin:24px 0 8px;padding-bottom:5px;
 .role{font-size:14px;margin:5px 0}.rl{font-weight:600;color:var(--accent);margin-right:4px}
 .aff{color:var(--ink2);font-size:12px}
 .abs{white-space:pre-wrap;font-size:14.5px;color:var(--ink);margin:8px 0 4px}
+.absh{font-size:14.5px;color:var(--ink);margin:8px 0 4px}.absh p{margin:0 0 10px}
+.absh a{color:var(--accent);word-break:break-word}
 .paper{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin:12px 0;box-shadow:0 1px 2px rgba(40,34,22,.05)}
 .paper h3{font-family:var(--serif);font-size:16px;margin:0 0 6px;line-height:1.25}
 .paper .au{font-size:13px;color:var(--ink2);margin-bottom:8px}
